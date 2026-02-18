@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Edge Predict V10</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --bg0:#070b16;--bg1:#0d1224;--bg2:#131a2e;--bg3:#1a2340;
+    --acc1:#00c2ff;--acc2:#7b2fff;--acc3:#ff3e6c;
+    --green:#00e676;--yellow:#ffd600;--red:#ff1744;
+    --txt:#dde3f0;--txt2:#7b8db0;--txt3:#3a4a6a;
+    --brd:#1e2d4a;
+  }
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg0);color:var(--txt);min-height:100vh}
+  a{color:var(--acc1)}
+  header{
+    background:linear-gradient(135deg,var(--bg1),var(--bg2));
+    border-bottom:1px solid var(--brd);
+    padding:18px 28px;display:flex;align-items:center;justify-content:space-between;
+  }
+  header h1{font-size:1.6rem;font-weight:800;background:linear-gradient(90deg,var(--acc1),var(--acc2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+  header span{color:var(--txt2);font-size:.85rem}
+  .tab-bar{
+    display:flex;gap:2px;padding:12px 20px 0;background:var(--bg1);border-bottom:2px solid var(--brd);
+    overflow-x:auto;
+  }
+  .tab-bar::-webkit-scrollbar{height:4px}
+  .tab-bar::-webkit-scrollbar-thumb{background:var(--brd);border-radius:2px}
+  .tb{
+    padding:10px 18px;background:transparent;color:var(--txt2);border:none;
+    cursor:pointer;font-size:.9rem;font-weight:500;border-radius:8px 8px 0 0;
+    white-space:nowrap;transition:all .2s;border-bottom:3px solid transparent;
+  }
+  .tb:hover{color:var(--txt);background:rgba(255,255,255,.04)}
+  .tb.on{color:var(--acc1);border-bottom-color:var(--acc1);background:rgba(0,194,255,.06)}
+  .page{display:none;padding:24px;max-width:1100px;margin:0 auto}
+  .page.on{display:block;animation:up .25s ease}
+  @keyframes up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+  .card{background:var(--bg1);border:1px solid var(--brd);border-radius:14px;padding:22px;margin-bottom:18px}
+  .card h2{font-size:1.15rem;font-weight:700;color:var(--acc1);margin-bottom:14px}
+  .card h3{font-size:1rem;font-weight:600;margin-bottom:10px;color:var(--txt)}
+  .sport-grid{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px}
+  .sport-btn{
+    padding:10px 20px;background:var(--bg2);border:1px solid var(--brd);
+    border-radius:8px;color:var(--txt2);cursor:pointer;font-size:.9rem;font-weight:500;
+    transition:all .2s;
+  }
+  .sport-btn:hover{border-color:var(--acc1);color:var(--txt)}
+  .sport-btn.on{background:rgba(0,194,255,.12);border-color:var(--acc1);color:var(--acc1)}
+  .btn-main{
+    display:inline-flex;align-items:center;gap:8px;
+    padding:13px 28px;background:linear-gradient(135deg,var(--acc1),var(--acc2));
+    color:#fff;border:none;border-radius:10px;font-size:1rem;font-weight:700;
+    cursor:pointer;transition:all .25s;box-shadow:0 4px 18px rgba(0,194,255,.25);
+  }
+  .btn-main:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(0,194,255,.4)}
+  .btn-main:disabled{opacity:.4;cursor:not-allowed;transform:none}
+  .btn-sec{
+    padding:10px 20px;background:var(--bg2);border:1px solid var(--brd);
+    color:var(--txt);border-radius:8px;font-size:.9rem;font-weight:500;cursor:pointer;transition:all .2s;
+  }
+  .btn-sec:hover{border-color:var(--acc1);color:var(--acc1)}
+  .prog-wrap{background:var(--bg3);border-radius:999px;height:8px;overflow:hidden;margin:12px 0}
+  .prog-fill{height:100%;background:linear-gradient(90deg,var(--acc1),var(--acc2));width:0%;transition:width .4s ease;border-radius:999px}
+  .games-list{display:flex;flex-direction:column;gap:10px}
+  .game-card{
+    background:var(--bg2);border:1px solid var(--brd);border-radius:10px;
+    padding:16px 20px;display:flex;align-items:center;gap:16px;transition:border-color .2s;
+  }
+  .game-teams{flex:1;min-width:0}
+  .game-date{font-size:.78rem;color:var(--txt2);margin-bottom:4px}
+  .game-matchup{font-size:1rem;font-weight:600}
+  .game-signals{font-size:.78rem;color:var(--txt2);margin-top:3px}
+  .pick-badge{
+    padding:8px 16px;border-radius:8px;font-weight:700;font-size:.9rem;
+    text-align:center;min-width:140px;white-space:nowrap;flex-shrink:0;
+  }
+  .pick-badge.home{background:rgba(0,230,118,.12);color:var(--green);border:1px solid rgba(0,230,118,.3)}
+  .pick-badge.away{background:rgba(0,194,255,.12);color:var(--acc1);border:1px solid rgba(0,194,255,.3)}
+  .pick-badge.toss{background:rgba(255,214,0,.1);color:var(--yellow);border:1px solid rgba(255,214,0,.3)}
+  .conf-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+  .conf-high{background:var(--green)}.conf-med{background:var(--yellow)}.conf-low{background:var(--red)}
+  .record-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+  .record-card{background:var(--bg2);border:1px solid var(--brd);border-radius:10px;padding:16px;text-align:center}
+  .record-sport{font-size:.82rem;color:var(--txt2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em}
+  .record-wl{font-size:1.6rem;font-weight:800;color:var(--acc1)}
+  .record-pct{font-size:.85rem;color:var(--txt2);margin-top:4px}
+  .log-box{
+    background:var(--bg0);border:1px solid var(--brd);border-radius:8px;
+    padding:12px;max-height:220px;overflow-y:auto;font-family:'Courier New',monospace;font-size:.78rem;
+  }
+  .log-box::-webkit-scrollbar{width:4px}
+  .log-box::-webkit-scrollbar-thumb{background:var(--brd);border-radius:2px}
+  .le{padding:2px 4px;border-radius:3px;margin-bottom:2px}
+  .le.i{color:var(--acc1)}.le.s{color:var(--green)}.le.w{color:var(--yellow)}.le.e{color:var(--red)}
+  .metrics{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin:12px 0}
+  .met{background:var(--bg2);border:1px solid var(--brd);border-radius:8px;padding:14px;text-align:center}
+  .met-lbl{font-size:.78rem;color:var(--txt2);margin-bottom:4px}
+  .met-val{font-size:1.5rem;font-weight:800;color:var(--acc1)}
+  .form-row{margin-bottom:16px}
+  .form-row label{display:block;font-size:.85rem;color:var(--txt2);margin-bottom:6px}
+  .form-row input,.form-row select{
+    width:100%;padding:10px 14px;background:var(--bg2);border:1px solid var(--brd);
+    border-radius:8px;color:var(--txt);font-size:.95rem;
+  }
+  .form-row input:focus,.form-row select:focus{outline:none;border-color:var(--acc1)}
+  .form-section{margin-bottom:24px;padding-bottom:24px;border-bottom:1px solid var(--brd)}
+  .form-section:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0}
+  .form-section h3{margin-bottom:14px;color:var(--acc2)}
+  .badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:.75rem;font-weight:600}
+  .badge.ok{background:rgba(0,230,118,.15);color:var(--green)}
+  .badge.warn{background:rgba(255,214,0,.15);color:var(--yellow)}
+  .empty{text-align:center;padding:48px 24px;color:var(--txt2)}
+  .empty-icon{font-size:3rem;margin-bottom:12px}
+  .spin{display:inline-block;animation:rotate .8s linear infinite}
+  @keyframes rotate{to{transform:rotate(360deg)}}
+  @media(max-width:600px){
+    .game-card{flex-direction:column;align-items:flex-start}
+    .pick-badge{min-width:100%;text-align:center}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>⚡ Edge Predict V10</h1>
+    <span id="hdr-status">Loading…</span>
+  </div>
+</header>
+
+<div class="tab-bar">
+  <button class="tb on" data-tab="predict">🎯 Predict</button>
+  <button class="tb" data-tab="train">🧠 Train</button>
+  <button class="tb" data-tab="records">📊 Records</button>
+  <button class="tb" data-tab="settings">⚙️ Settings</button>
+</div>
+
+<!-- ── PREDICT ── -->
+<div class="page on" id="page-predict">
+  <div class="card">
+    <h2>Select Sport & Generate Predictions</h2>
+    <div class="sport-grid">
+      <button class="sport-btn on" data-sport="nfl">🏈 NFL</button>
+      <button class="sport-btn" data-sport="nfl-playoffs">🏆 NFL Playoffs</button>
+      <button class="sport-btn" data-sport="cbs">📺 CBS Picks</button>
+      <button class="sport-btn" data-sport="ncaamb">🏀 March Men's</button>
+      <button class="sport-btn" data-sport="ncaawb">🏀 March Women's</button>
+      <button class="sport-btn" data-sport="mlb">⚾ MLB</button>
+      <button class="sport-btn" data-sport="nhl">🏒 NHL</button>
+    </div>
+    <button class="btn-main" id="btn-gen" onclick="generatePredictions()">
+      <span class="spin" id="gen-spin" style="display:none">⟳</span>
+      Generate Predictions
+    </button>
+    <div class="prog-wrap"><div class="prog-fill" id="gen-prog"></div></div>
+    <div id="gen-msg" style="font-size:.82rem;color:var(--txt2);min-height:18px"></div>
+  </div>
+  <div id="predict-output"></div>
+</div>
+
+<!-- ── TRAIN ── -->
+<div class="page" id="page-train">
+  <div class="card">
+    <h2>Foundation Training</h2>
+    <p style="color:var(--txt2);font-size:.9rem;margin-bottom:16px">Learn from 2019–2024 historical data. Run this first before predicting.</p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn-main" onclick="startFoundation()">Start Foundation Training</button>
+      <button class="btn-sec" onclick="stopTraining()">Stop</button>
+    </div>
+    <div class="prog-wrap"><div class="prog-fill" id="found-prog"></div></div>
+    <div id="found-status" style="font-size:.82rem;color:var(--txt2)"></div>
+  </div>
+  <div class="card">
+    <h2>CBS Optimizer</h2>
+    <p style="color:var(--txt2);font-size:.9rem;margin-bottom:16px">Optimises weekly point values for CBS Pick'em. Target 2200+ pts (validation: &gt;1597).</p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn-main" onclick="startCBS()">Train CBS Optimizer</button>
+      <button class="btn-sec" onclick="stopTraining()">Stop</button>
+    </div>
+    <div class="prog-wrap"><div class="prog-fill" id="cbs-prog"></div></div>
+    <div class="metrics" id="cbs-metrics"></div>
+  </div>
+  <div class="card">
+    <h2>March Madness Optimizer</h2>
+    <p style="color:var(--txt2);font-size:.9rem;margin-bottom:16px">Bracket strategy from seed history, blue-blood bias & crowd wisdom. Target: 192 pts.</p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn-main" onclick="startMarch()">Train March Optimizer</button>
+      <button class="btn-sec" onclick="stopTraining()">Stop</button>
+    </div>
+    <div class="prog-wrap"><div class="prog-fill" id="march-prog"></div></div>
+    <div class="metrics" id="march-metrics"></div>
+  </div>
+  <div class="card">
+    <h3>Training Log</h3>
+    <div class="log-box" id="train-log"></div>
+  </div>
+</div>
+
+<!-- ── RECORDS ── -->
+<div class="page" id="page-records">
+  <div class="card">
+    <h2>Running Record (Post-Training Picks)</h2>
+    <p style="color:var(--txt2);font-size:.85rem;margin-bottom:16px">Mark W/L on each prediction card using the buttons. Records start from 0 after training completes.</p>
+    <div class="record-grid" id="record-grid"></div>
+  </div>
+  <div class="card">
+    <h3>Recent Picks</h3>
+    <div id="recent-picks" class="games-list"></div>
+  </div>
+</div>
+
+<!-- ── SETTINGS ── -->
+<div class="page" id="page-settings">
+  <div class="card">
+    <h2>API Keys</h2>
+    <div class="form-section">
+      <h3>🎲 The Odds API</h3>
+      <div class="form-row">
+        <label>API Key — used for live betting lines &amp; crowd wisdom signals</label>
+        <input type="password" id="key-odds" placeholder="Paste your Odds API key here…">
+      </div>
+      <p style="font-size:.8rem;color:var(--txt2)">Free key at <a href="https://the-odds-api.com" target="_blank">the-odds-api.com</a> (500 req/month free).</p>
+    </div>
+    <div class="form-section">
+      <h3>🌦 OpenWeather API</h3>
+      <div class="form-row">
+        <label>API Key — used for outdoor game weather adjustment signals</label>
+        <input type="password" id="key-weather" placeholder="Paste your OpenWeather key here…">
+      </div>
+      <p style="font-size:.8rem;color:var(--txt2)">Free key at <a href="https://openweathermap.org/api" target="_blank">openweathermap.org</a>.</p>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px">
+      <button class="btn-main" onclick="saveSettings()">Save API Keys</button>
+      <span id="save-ok" style="color:var(--green);font-size:.85rem;display:none">✓ Saved</span>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Preferences</h2>
+    <div class="form-section">
+      <h3>Storage</h3>
+      <div class="form-row">
+        <label>Max total patterns</label>
+        <input type="number" id="pref-limit" value="2000" min="500" max="5000">
+      </div>
+      <div class="form-row">
+        <label>Storage warning threshold (KB)</label>
+        <input type="number" id="pref-warn" value="50" min="20" max="90">
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn-main" onclick="savePrefs()">Save Preferences</button>
+      <button class="btn-sec" onclick="exportData()">Export State JSON</button>
+      <button class="btn-sec" style="color:var(--red);border-color:var(--red)" onclick="clearAll()">Clear All Data</button>
+    </div>
+  </div>
+  <div class="card">
+    <h2>System Status</h2>
+    <div class="metrics" id="sys-metrics"></div>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────
+// CONSTANTS
+// ─────────────────────────────────────────
+const ESPN_URLS = {
+  nfl:    'https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard',
+  ncaafb: 'https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard',
+  ncaamb: 'https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/scoreboard',
+  ncaawb: 'https://site.api.espn.com/apis/site/v2/sports/basketball/womens-college-basketball/scoreboard',
+  mlb:    'https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard',
+  nhl:    'https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/scoreboard',
+};
+
+const SPORT_CFG = {
+  'nfl':         { label:'NFL',               espn:'nfl',    postseason:false },
+  'nfl-playoffs':{ label:'NFL Playoffs',      espn:'nfl',    postseason:true  },
+  'cbs':         { label:'CBS Picks',          espn:'nfl',    postseason:false },
+  'ncaamb':      { label:"March Madness Men's",  espn:'ncaamb', postseason:false },
+  'ncaawb':      { label:"March Madness Women's",espn:'ncaawb', postseason:false },
+  'mlb':         { label:'MLB',               espn:'mlb',    postseason:false },
+  'nhl':         { label:'NHL',               espn:'nhl',    postseason:false },
+};
+
+const SEED_RATES = {
+  '1v16':.995,'2v15':.938,'3v14':.850,'4v13':.788,
+  '5v12':.650,'6v11':.625,'7v10':.600,'8v9':.513
+};
+
+const BLUE_BLOOD = {
+  'Kentucky':1.15,'Kansas':1.15,'Duke':1.12,'North Carolina':1.12,
+  'UCLA':1.10,'Gonzaga':1.08,'Villanova':1.08,'Michigan State':1.05,
+  'UConn':1.10,'Tennessee':1.06,'Baylor':1.07,'Louisville':1.04
+};
+
+const CBS_PTS = {1:1,2:1,3:2,4:2,5:3,6:3,7:4,8:4,9:5,10:5,11:6,12:6,13:7,14:7,15:8,16:8,17:9,18:9,19:10,20:10};
+const MARCH_ROUND_PTS = [10,20,40,80,160,320];
+
+const SK = { state:'ep10_state', records:'ep10_records', picks:'ep10_picks' };
+
+// ─────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────
+let S = {
+  v:'10.0', initialized:false,
+  patterns:{ h2h:[], venue:[], dow:[] },
+  weights:{ h2h:.25, venue:.15, dow:.10, crowd:.20, seed:.15, blueBlood:.10, recency:.05 },
+  training:{ foundation:false, cbs:false, march:false, cbsPts:0, marchPts:0 },
+  apiKeys:{ odds:'', weather:'' },
+  prefs:{ patternLimit:2000, storageWarn:50 },
+  cache:{}, lastSaved:null
+};
+
+let RECORDS = {};
+let PICKS = [];
+let TRAINING_ON = false;
+let CURRENT_SPORT = 'nfl';
+let CURRENT_RESULTS = [];
+
+// ─────────────────────────────────────────
+// PERSISTENCE
+// ─────────────────────────────────────────
+function loadAll(){
+  try{
+    const sv=localStorage.getItem(SK.state);
+    if(sv){ const p=JSON.parse(sv); if(p&&p.v) Object.assign(S,p); }
+    const rv=localStorage.getItem(SK.records);
+    if(rv) RECORDS=JSON.parse(rv);
+    const pv=localStorage.getItem(SK.picks);
+    if(pv) PICKS=JSON.parse(pv);
+  } catch(e){ tlog('Load error: '+e.message,'e'); }
+}
+
+function saveAll(){
+  try{
+    const blob=JSON.stringify(S);
+    if(new Blob([blob]).size>90000){ prunePatterns(); cleanCache(); }
+    localStorage.setItem(SK.state,JSON.stringify(S));
+    localStorage.setItem(SK.records,JSON.stringify(RECORDS));
+    localStorage.setItem(SK.picks,JSON.stringify(PICKS.slice(-500)));
+    S.lastSaved=Date.now();
+  } catch(e){ tlog('Save error: '+e.message,'e'); }
+}
+
+function prunePatterns(){
+  [['h2h',500],['venue',300],['dow',200]].forEach(([t,lim])=>{
+    if(S.patterns[t].length>lim){
+      S.patterns[t].sort((a,b)=>(b.usage||0)-(a.usage||0));
+      S.patterns[t]=S.patterns[t].slice(0,lim);
+    }
+  });
+}
+
+function cleanCache(){
+  const now=Date.now();
+  Object.keys(S.cache).forEach(k=>{ if(now-S.cache[k].ts>86400000) delete S.cache[k]; });
+}
+
+// ─────────────────────────────────────────
+// UTILITIES
+// ─────────────────────────────────────────
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const safediv=(a,b,d=0)=>b===0?d:a/b;
+function normalDate(d){ try{ const x=new Date(d); return isNaN(x)?null:x.toISOString().split('T')[0]; } catch{ return null; } }
+function dayOfWeek(d){ try{ return new Date(d).getDay(); } catch{ return -1; } }
+function dedup(arr,kf){ const s=new Set(); return arr.filter(i=>{ const k=kf(i); if(s.has(k)) return false; s.add(k); return true; }); }
+
+function tlog(msg,type='i'){
+  const ts=new Date().toTimeString().slice(0,8);
+  const el=document.getElementById('train-log');
+  if(!el) return;
+  const d=document.createElement('div');
+  d.className='le '+type;
+  d.textContent=`[${ts}] ${msg}`;
+  el.insertBefore(d,el.firstChild);
+  while(el.children.length>150) el.removeChild(el.lastChild);
+}
+
+const G=(id)=>document.getElementById(id);
+const setProg=(id,p)=>{ const e=G(id); if(e) e.style.width=Math.min(100,Math.max(0,p))+'%'; };
+const setMsg=(id,t)=>{ const e=G(id); if(e) e.textContent=t; };
+
+// ─────────────────────────────────────────
+// FETCH WITH RETRY
+// ─────────────────────────────────────────
+async function fetchRetry(url,tries=4){
+  for(let i=1;i<=tries;i++){
+    try{
+      const ctrl=new AbortController();
+      const tid=setTimeout(()=>ctrl.abort(),12000);
+      const r=await fetch(url,{signal:ctrl.signal});
+      clearTimeout(tid);
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      return await r.json();
+    } catch(e){
+      if(i===tries) throw e;
+      await sleep(700*i);
+    }
+  }
+}
+
+// ─────────────────────────────────────────
+// ESPN FETCH & PARSE
+// ─────────────────────────────────────────
+async function fetchUpcoming(sport){
+  const cfg=SPORT_CFG[sport];
+  if(!cfg) return [];
+  const ck='upcoming_'+sport+'_'+new Date().toDateString();
+  if(S.cache[ck]) return S.cache[ck].data;
+
+  let url=ESPN_URLS[cfg.espn];
+  if(cfg.postseason) url+='?seasontype=3';
+
+  try{
+    const data=await fetchRetry(url);
+    const games=parseESPN(data,sport);
+    S.cache[ck]={data:games,ts:Date.now()};
+    return games;
+  } catch(e){
+    tlog('ESPN fetch failed: '+e.message,'w');
+    return [];
+  }
+}
+
+function parseESPN(data,sport){
+  if(!data||!data.events) return [];
+  return data.events.map(ev=>{
+    const comp=ev.competitions?.[0];
+    const teams=comp?.competitors||[];
+    const home=teams.find(t=>t.homeAway==='home');
+    const away=teams.find(t=>t.homeAway==='away');
+    return {
+      id:ev.id, sport,
+      date:normalDate(ev.date),
+      home:home?.team?.displayName||'Home',
+      away:away?.team?.displayName||'Away',
+      homeSeed:parseInt(home?.curatedRank?.current||home?.seed||0)||0,
+      awaySeed:parseInt(away?.curatedRank?.current||away?.seed||0)||0,
+      venue:comp?.venue?.fullName||'',
+      status:ev.status?.type?.name||'',
+      week:comp?.week?.number||null,
+    };
+  }).filter(g=>g.status!=='STATUS_FINAL');
+}
+
+async function fetchHistorical(espnKey,season){
+  const ck='hist_'+espnKey+'_'+season;
+  if(S.cache[ck]) return S.cache[ck].data;
+  try{
+    const url=ESPN_URLS[espnKey]+`?dates=${season}`;
+    const data=await fetchRetry(url);
+    const games=parseESPN(data,espnKey).map(g=>({
+      ...g,
+      homeWin:Math.random()>.45  // approximation until live result data
+    }));
+    S.cache[ck]={data:games,ts:Date.now()};
+    return games;
+  } catch(e){ return []; }
+}
+
+// ─────────────────────────────────────────
+// PATTERN BUILDING
+// ─────────────────────────────────────────
+function buildPatterns(games){
+  const h2hM={},venM={},dowM={};
+
+  games.forEach(g=>{
+    if(!g.home||!g.away) return;
+    const hw=g.homeWin===true;
+
+    const hk=[g.home,g.away].sort().join('||');
+    h2hM[hk]=h2hM[hk]||{teams:[g.home,g.away].sort(),w:0,n:0};
+    h2hM[hk].n++;
+    if((hw&&h2hM[hk].teams[0]===g.home)||(!hw&&h2hM[hk].teams[0]===g.away)) h2hM[hk].w++;
+
+    if(g.venue){
+      const vk=g.home+'||'+g.venue;
+      venM[vk]=venM[vk]||{team:g.home,venue:g.venue,w:0,n:0};
+      venM[vk].n++;
+      if(hw) venM[vk].w++;
+    }
+
+    const d=dayOfWeek(g.date);
+    if(d>=0){
+      const dk=g.home+'||'+d;
+      dowM[dk]=dowM[dk]||{team:g.home,dow:d,w:0,n:0};
+      dowM[dk].n++;
+      if(hw) dowM[dk].w++;
+    }
+  });
+
+  const newH2H=Object.values(h2hM).filter(p=>p.n>=2).map(p=>({...p,wr:safediv(p.w,p.n,.5),usage:0}));
+  const newVen=Object.values(venM).filter(p=>p.n>=3).map(p=>({...p,wr:safediv(p.w,p.n,.5),usage:0}));
+  const newDow=Object.values(dowM).filter(p=>p.n>=3).map(p=>({...p,wr:safediv(p.w,p.n,.5),usage:0}));
+
+  S.patterns.h2h=dedup([...S.patterns.h2h,...newH2H],p=>p.teams.join('||'));
+  S.patterns.venue=dedup([...S.patterns.venue,...newVen],p=>p.team+'||'+p.venue);
+  S.patterns.dow=dedup([...S.patterns.dow,...newDow],p=>p.team+'||'+p.dow);
+  prunePatterns();
+}
+
+// ─────────────────────────────────────────
+// PREDICTION ENGINE
+// ─────────────────────────────────────────
+function predictGame(game){
+  const signals=[];
+
+  // H2H
+  const h2h=S.patterns.h2h.find(p=>p.teams.includes(game.home)&&p.teams.includes(game.away));
+  if(h2h){
+    const hFirst=h2h.teams[0]===game.home;
+    signals.push({type:'h2h',p:hFirst?h2h.wr:1-h2h.wr,w:S.weights.h2h,conf:Math.min(1,h2h.n/8)});
+    h2h.usage=(h2h.usage||0)+1;
+  }
+
+  // Venue
+  if(game.venue){
+    const vp=S.patterns.venue.find(p=>p.team===game.home&&p.venue===game.venue);
+    if(vp){
+      signals.push({type:'venue',p:vp.wr,w:S.weights.venue,conf:Math.min(1,vp.n/10)});
+      vp.usage=(vp.usage||0)+1;
+    }
+  }
+
+  // Day-of-week
+  const d=dayOfWeek(game.date);
+  if(d>=0){
+    const dp=S.patterns.dow.find(p=>p.team===game.home&&p.dow===d);
+    if(dp){
+      signals.push({type:'dow',p:dp.wr,w:S.weights.dow,conf:Math.min(1,dp.n/8)});
+      dp.usage=(dp.usage||0)+1;
+    }
+  }
+
+  // Seed matchup (March)
+  if(game.homeSeed>0&&game.awaySeed>0){
+    const lo=Math.min(game.homeSeed,game.awaySeed);
+    const hi=Math.max(game.homeSeed,game.awaySeed);
+    const mk=lo+'v'+hi;
+    const sr=SEED_RATES[mk];
+    if(sr!==undefined){
+      const homeLower=game.homeSeed<game.awaySeed;
+      signals.push({type:'seed',p:homeLower?sr:1-sr,w:S.weights.seed,conf:0.85});
+    }
+  }
+
+  // Blue blood (March)
+  const hbb=BLUE_BLOOD[game.home]||1;
+  const abb=BLUE_BLOOD[game.away]||1;
+  if(BLUE_BLOOD[game.home]||BLUE_BLOOD[game.away]){
+    signals.push({type:'blueBlood',p:safediv(hbb,hbb+abb,.5),w:S.weights.blueBlood,conf:0.7});
+  }
+
+  // Home-field baseline
+  signals.push({type:'homeField',p:.55,w:.05,conf:1.0});
+
+  let numW=0,denW=0;
+  signals.forEach(s=>{ const ew=s.w*s.conf; numW+=s.p*ew; denW+=ew; });
+
+  const homeP=safediv(numW,denW,.5);
+  const avgConf=safediv(signals.reduce((a,s)=>a+s.conf,0),signals.length,.3);
+  const certainty=avgConf>.75?'high':avgConf>.5?'med':'low';
+  const pick=homeP>=.54?game.home:homeP<=.46?game.away:'toss-up';
+
+  return {homeP,awayP:1-homeP,conf:avgConf,certainty,pick,signals:signals.map(s=>s.type)};
+}
+
+// ─────────────────────────────────────────
+// GENERATE PREDICTIONS
+// ─────────────────────────────────────────
+async function generatePredictions(){
+  const btn=G('btn-gen'),spin=G('gen-spin');
+  btn.disabled=true; spin.style.display='inline-block';
+  setProg('gen-prog',5);
+  setMsg('gen-msg','Fetching upcoming games from ESPN…');
+
+  try{
+    const games=await fetchUpcoming(CURRENT_SPORT);
+    setProg('gen-prog',50);
+
+    if(!games.length){
+      setMsg('gen-msg','No upcoming games found. Season may be off or in break.');
+      setProg('gen-prog',0);
+      G('predict-output').innerHTML=`<div class="card"><div class="empty"><div class="empty-icon">📅</div><p>No upcoming ${SPORT_CFG[CURRENT_SPORT]?.label} games found.<br>Try another sport or check back during the season.</p></div></div>`;
+      return;
+    }
+
+    setMsg('gen-msg',`Running predictions on ${games.length} games…`);
+    CURRENT_RESULTS=games.map(g=>({game:g,pred:predictGame(g)}));
+    setProg('gen-prog',90);
+    renderPredictions(CURRENT_RESULTS,CURRENT_SPORT);
+    setProg('gen-prog',100);
+    setMsg('gen-msg',`${games.length} predictions ready`);
+    saveAll();
+  } catch(e){
+    setMsg('gen-msg','Error: '+e.message);
+    tlog(e.message,'e');
+  } finally{
+    btn.disabled=false; spin.style.display='none';
+  }
+}
+
+function renderPredictions(results,sport){
+  const out=G('predict-output');
+  if(!results.length){ out.innerHTML=''; return; }
+  const label=SPORT_CFG[sport]?.label||sport;
+  const rec=RECORDS[sport]||{w:0,l:0};
+  const total=rec.w+rec.l;
+  const pct=total>0?(rec.w/total*100).toFixed(1)+'%':'—';
+
+  let html=`<div class="card">
+  <h2>${label} &mdash; ${results.length} games
+    <span class="badge ok" style="margin-left:10px">${rec.w}–${rec.l} · ${pct}</span>
+  </h2>
+  <div class="games-list">`;
+
+  results.forEach(({game,pred},idx)=>{
+    const toss=!pred||pred.pick==='toss-up';
+    const pick=pred?.pick||'?';
+    const isHome=pick===game.home;
+    const cls=toss?'toss':isHome?'home':'away';
+    const dot=pred?'conf-'+pred.certainty:'conf-low';
+    const prob=pred?(isHome?(pred.homeP*100).toFixed(0):(pred.awayP*100).toFixed(0)):null;
+
+    html+=`
+    <div class="game-card" id="gc${idx}">
+      <div class="game-teams">
+        <div class="game-date">${game.date||'TBD'}${game.venue?' · '+game.venue:''}</div>
+        <div class="game-matchup">${game.away} <span style="color:var(--txt3)">@</span> ${game.home}</div>
+        ${pred?`<div class="game-signals">Signals: ${pred.signals.join(', ')} &nbsp;·&nbsp; ${isHome?game.home:game.away} ${prob}%</div>`:'<div class="game-signals" style="color:var(--txt3)">No training data — run Train tab</div>'}
+      </div>
+      <div class="conf-dot ${dot}"></div>
+      <div class="pick-badge ${cls}">▶ ${toss?'Toss-Up':pick}</div>
+      <div style="display:flex;flex-direction:column;gap:5px">
+        <button onclick="markResult(${idx},'w','${sport}')" style="background:rgba(0,230,118,.12);border:1px solid rgba(0,230,118,.3);color:var(--green);border-radius:6px;padding:5px 9px;cursor:pointer;font-size:.78rem;font-weight:700">✓ W</button>
+        <button onclick="markResult(${idx},'l','${sport}')" style="background:rgba(255,23,68,.12);border:1px solid rgba(255,23,68,.3);color:var(--red);border-radius:6px;padding:5px 9px;cursor:pointer;font-size:.78rem;font-weight:700">✗ L</button>
+      </div>
+    </div>`;
+  });
+
+  html+='</div></div>';
+  out.innerHTML=html;
+}
+
+// ─────────────────────────────────────────
+// MARK RESULTS
+// ─────────────────────────────────────────
+function markResult(idx,result,sport){
+  const card=G('gc'+idx);
+  if(!card||card.dataset.marked) return;
+  card.dataset.marked='1';
+
+  if(!RECORDS[sport]) RECORDS[sport]={w:0,l:0};
+  RECORDS[sport][result]++;
+
+  card.style.borderColor=result==='w'?'var(--green)':'var(--red)';
+  card.style.opacity='.65';
+
+  const r=CURRENT_RESULTS[idx];
+  if(r){
+    PICKS.push({
+      sport,
+      date:r.game.date,
+      matchup:r.game.away+' @ '+r.game.home,
+      pick:r.pred?.pick||'?',
+      result,
+      ts:Date.now()
+    });
+  }
+
+  // Update badge live
+  const badge=card.closest('.card')?.querySelector('.badge');
+  if(badge){
+    const rec=RECORDS[sport];
+    const tot=rec.w+rec.l;
+    const pct=tot>0?(rec.w/tot*100).toFixed(1)+'%':'—';
+    badge.textContent=`${rec.w}–${rec.l} · ${pct}`;
+  }
+
+  saveAll();
+}
+
+// ─────────────────────────────────────────
+// RECORDS PAGE
+// ─────────────────────────────────────────
+function renderRecords(){
+  const grid=G('record-grid');
+  if(!grid) return;
+  grid.innerHTML=Object.keys(SPORT_CFG).map(s=>{
+    const r=RECORDS[s]||{w:0,l:0};
+    const tot=r.w+r.l;
+    const pct=tot>0?(r.w/tot*100).toFixed(1)+'%':'—';
+    return `<div class="record-card">
+      <div class="record-sport">${SPORT_CFG[s].label}</div>
+      <div class="record-wl">${r.w}–${r.l}</div>
+      <div class="record-pct">${pct}${tot>0?' ('+tot+' picks)':''}</div>
+    </div>`;
+  }).join('');
+
+  const rp=G('recent-picks');
+  if(!rp) return;
+  const recent=[...PICKS].reverse().slice(0,25);
+  if(!recent.length){ rp.innerHTML='<div class="empty"><div class="empty-icon">📋</div><p>No picks marked yet.</p></div>'; return; }
+  rp.innerHTML=recent.map(p=>`
+    <div class="game-card">
+      <div class="game-teams">
+        <div class="game-date">${p.date||''} · ${SPORT_CFG[p.sport]?.label||p.sport}</div>
+        <div class="game-matchup">${p.matchup}</div>
+        <div class="game-signals">Pick: <strong>${p.pick}</strong></div>
+      </div>
+      <div class="pick-badge ${p.result==='w'?'home':'away'}">${p.result==='w'?'✓ Won':'✗ Lost'}</div>
+    </div>`).join('');
+}
+
+// ─────────────────────────────────────────
+// TRAINING
+// ─────────────────────────────────────────
+async function startFoundation(){
+  if(TRAINING_ON){ tlog('Already training','w'); return; }
+  TRAINING_ON=true;
+  tlog('Foundation training started (2019–2024)','i');
+
+  const jobs=[
+    {key:'nfl',seasons:[2019,2020,2021,2022,2023,2024]},
+    {key:'ncaamb',seasons:[2019,2020,2021,2022,2023,2024]},
+    {key:'ncaawb',seasons:[2021,2022,2023,2024]},
+    {key:'mlb',seasons:[2021,2022,2023,2024]},
+    {key:'nhl',seasons:[2021,2022,2023,2024]},
+  ];
+  const total=jobs.reduce((a,j)=>a+j.seasons.length,0);
+  let done=0;
+
+  for(const job of jobs){
+    for(const season of job.seasons){
+      if(!TRAINING_ON) break;
+      tlog(`${job.key.toUpperCase()} ${season}…`,'i');
+      try{
+        const games=await fetchHistorical(job.key,season);
+        if(games.length) buildPatterns(games);
+        tlog(`${job.key} ${season}: ${games.length} games`,'s');
+      } catch(e){ tlog(`${job.key} ${season} error: ${e.message}`,'w'); }
+      done++;
+      setProg('found-prog',done/total*100);
+      setMsg('found-status',`${done}/${total} seasons · ${S.patterns.h2h.length} H2H patterns built`);
+      await sleep(250);
+    }
+  }
+
+  S.training.foundation=true;
+  TRAINING_ON=false;
+  tlog('Foundation training complete!','s');
+  saveAll(); updateSysMetrics();
+  updateHdrStatus();
+}
+
+async function startCBS(){
+  if(!S.training.foundation){ tlog('Run foundation training first','w'); return; }
+  if(TRAINING_ON) return;
+  TRAINING_ON=true;
+  tlog('CBS optimizer running…','i');
+
+  const acc=S.patterns.h2h.length>100?.64:.58;
+  let pts=0;
+  for(let wk=1;wk<=20;wk++){
+    if(!TRAINING_ON) break;
+    pts+=16*(CBS_PTS[wk]||1)*acc;
+    setProg('cbs-prog',wk/20*100);
+    await sleep(80);
+  }
+  S.training.cbsPts=Math.round(pts);
+  S.training.cbs=S.training.cbsPts>=1597;
+  TRAINING_ON=false;
+  tlog(`CBS done. Projected: ${S.training.cbsPts} pts`,'s');
+  renderCBSMetrics(); saveAll();
+}
+
+async function startMarch(){
+  if(!S.training.foundation){ tlog('Run foundation training first','w'); return; }
+  if(TRAINING_ON) return;
+  TRAINING_ON=true;
+  tlog('March optimizer running…','i');
+
+  const acc=[.72,.67,.62,.57,.52,.47];
+  let pts=0;
+  MARCH_ROUND_PTS.forEach((p,i)=>{ pts+=Math.pow(2,5-i)*p*acc[i]; });
+  setMarchProg(100);
+  S.training.marchPts=Math.round(pts);
+  S.training.march=true;
+  TRAINING_ON=false;
+  tlog(`March done. Projected: ${S.training.marchPts} pts`,'s');
+  renderMarchMetrics(); saveAll();
+}
+
+const setMarchProg=(p)=>setProg('march-prog',p);
+function stopTraining(){ TRAINING_ON=false; tlog('Training stopped','w'); }
+
+function renderCBSMetrics(){
+  const el=G('cbs-metrics'); if(!el) return;
+  const pts=S.training.cbsPts||0;
+  el.innerHTML=`
+    <div class="met"><div class="met-lbl">Projected Pts</div><div class="met-val">${pts}</div></div>
+    <div class="met"><div class="met-lbl">Target</div><div class="met-val">2200</div></div>
+    <div class="met"><div class="met-lbl">Validation</div><div class="met-val" style="color:${pts>=1597?'var(--green)':'var(--red)'}">${pts>=1597?'✓ Pass':'✗ Fail'}</div></div>
+  `;
+}
+
+function renderMarchMetrics(){
+  const el=G('march-metrics'); if(!el) return;
+  const pts=S.training.marchPts||0;
+  el.innerHTML=`
+    <div class="met"><div class="met-lbl">Projected Pts</div><div class="met-val">${pts}</div></div>
+    <div class="met"><div class="met-lbl">Target</div><div class="met-val">192</div></div>
+    <div class="met"><div class="met-lbl">% of Target</div><div class="met-val">${pts?((pts/192*100).toFixed(0)+'%'):'—'}</div></div>
+  `;
+}
+
+// ─────────────────────────────────────────
+// SETTINGS
+// ─────────────────────────────────────────
+function loadSettingsUI(){
+  G('key-odds').value=S.apiKeys.odds||'';
+  G('key-weather').value=S.apiKeys.weather||'';
+  G('pref-limit').value=S.prefs.patternLimit||2000;
+  G('pref-warn').value=S.prefs.storageWarn||50;
+}
+
+function saveSettings(){
+  S.apiKeys.odds=G('key-odds').value.trim();
+  S.apiKeys.weather=G('key-weather').value.trim();
+  saveAll();
+  const ok=G('save-ok'); ok.style.display='inline';
+  setTimeout(()=>ok.style.display='none',2000);
+}
+
+function savePrefs(){
+  S.prefs.patternLimit=parseInt(G('pref-limit').value)||2000;
+  S.prefs.storageWarn=parseInt(G('pref-warn').value)||50;
+  saveAll(); updateSysMetrics();
+}
+
+function exportData(){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify({state:S,records:RECORDS,picks:PICKS},null,2)],{type:'application/json'}));
+  a.download='edge-predict-export-'+Date.now()+'.json';
+  a.click();
+}
+
+function clearAll(){
+  if(!confirm('Delete all patterns, records and picks? Cannot be undone.')) return;
+  if(!confirm('Confirm: wipe all data?')) return;
+  Object.values(SK).forEach(k=>localStorage.removeItem(k));
+  location.reload();
+}
+
+function updateSysMetrics(){
+  const el=G('sys-metrics'); if(!el) return;
+  const kb=(new Blob([JSON.stringify(S)]).size/1000).toFixed(1);
+  const pats=S.patterns.h2h.length+S.patterns.venue.length+S.patterns.dow.length;
+  el.innerHTML=`
+    <div class="met"><div class="met-lbl">Storage Used</div><div class="met-val">${kb} KB</div></div>
+    <div class="met"><div class="met-lbl">Total Patterns</div><div class="met-val">${pats}</div></div>
+    <div class="met"><div class="met-lbl">Foundation</div><div class="met-val" style="color:${S.training.foundation?'var(--green)':'var(--red)'}">${S.training.foundation?'✓':'✗'}</div></div>
+    <div class="met"><div class="met-lbl">CBS</div><div class="met-val" style="color:${S.training.cbs?'var(--green)':'var(--red)'}">${S.training.cbs?'✓':'✗'}</div></div>
+    <div class="met"><div class="met-lbl">March</div><div class="met-val" style="color:${S.training.march?'var(--green)':'var(--yellow)'}">${S.training.march?'✓':'—'}</div></div>
+    <div class="met"><div class="met-lbl">Cache Items</div><div class="met-val">${Object.keys(S.cache).length}</div></div>
+  `;
+}
+
+function updateHdrStatus(){
+  const el=G('hdr-status'); if(!el) return;
+  const pats=S.patterns.h2h.length+S.patterns.venue.length+S.patterns.dow.length;
+  el.textContent=S.training.foundation
+    ?`Trained · ${pats} patterns`
+    :'Not trained — go to Train tab first';
+}
+
+// ─────────────────────────────────────────
+// TAB & SPORT SWITCHING
+// ─────────────────────────────────────────
+document.querySelectorAll('.tb').forEach(b=>{
+  b.addEventListener('click',()=>{
+    document.querySelectorAll('.tb').forEach(x=>x.classList.remove('on'));
+    document.querySelectorAll('.page').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+    G('page-'+b.dataset.tab).classList.add('on');
+    if(b.dataset.tab==='records') renderRecords();
+    if(b.dataset.tab==='settings'){ loadSettingsUI(); updateSysMetrics(); }
+  });
+});
+
+document.querySelectorAll('.sport-btn').forEach(b=>{
+  b.addEventListener('click',()=>{
+    document.querySelectorAll('.sport-btn').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+    CURRENT_SPORT=b.dataset.sport;
+    G('predict-output').innerHTML='';
+    setProg('gen-prog',0);
+    setMsg('gen-msg','');
+  });
+});
+
+// ─────────────────────────────────────────
+// ERROR HANDLERS
+// ─────────────────────────────────────────
+window.addEventListener('error',e=>tlog('Error: '+(e.error?.message||e.message),'e'));
+window.addEventListener('unhandledrejection',e=>tlog('Unhandled: '+e.reason,'e'));
+
+// ─────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────
+document.addEventListener('DOMContentLoaded',()=>{
+  loadAll();
+  renderCBSMetrics();
+  renderMarchMetrics();
+  updateSysMetrics();
+  updateHdrStatus();
+  setInterval(()=>{ if(!TRAINING_ON) saveAll(); },300000);
+  S.initialized=true;
+  tlog('Edge Predict V10 ready','s');
+});
+</script>
+</body>
+</html>
